@@ -1,14 +1,16 @@
 {
   "name": "rdf-preview",
-  "displayName": "RDF Preview",
+  "displayName": "RDF Graph Preview",
   "description": "Preview RDF Graph inside VS Code",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.94.0"
   },
+  "publisher": "LucienReboul",
   "categories": [
     "Visualization"
   ],
+  "repository": "https://github.com/LucienRbl/rdf-preview.git",
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
