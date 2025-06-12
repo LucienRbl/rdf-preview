@@ -2,34 +2,34 @@ import * as vscode from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "rdf-preview" is now active!');
+    // Use the console to output diagnostic information (console.log) and errors (console.error)
+    // This line of code will only be executed once when your extension is activated
+    console.log('Congratulations, your extension "rdf-preview" is now active!');
 
-	
 
-	const disposable = vscode.commands.registerCommand('rdf-preview.showGraph', () => {
-		const panel = vscode.window.createWebviewPanel(
-			'rdfPreview', // Identifies the type of the webview. Used internally
-			'RDF Preview', // Title of the panel displayed to the user
-			vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
-			{
-				enableScripts: true
-			} // Webview options. More on these later.
-		);
-		const quads = getQuads(); // Replace with your RDF parsing logic
+
+    const disposable = vscode.commands.registerCommand('rdf-preview.showGraph', () => {
+        const panel = vscode.window.createWebviewPanel(
+            'rdfPreview', // Identifies the type of the webview. Used internally
+            'RDF Preview', // Title of the panel displayed to the user
+            vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
+            {
+                enableScripts: true
+            } // Webview options. More on these later.
+        );
+        const quads = getQuads(); // Replace with your RDF parsing logic
         const nodes = generateNodes(quads); // Function to convert quads to nodes
         const links = generateLinks(quads); // Function to convert quads to links
 
-		panel.webview.html = getWebviewContent(nodes, links);
-	});
+        panel.webview.html = getWebviewContent(nodes, links);
+    });
 
-	context.subscriptions.push(disposable);
+    context.subscriptions.push(disposable);
 }
 
 const { Parser } = require('n3');
 const parser = new Parser();
-const prefixMap : { [key: string]: string } = {};
+const prefixMap: { [key: string]: string } = {};
 
 
 function getQuads() {
@@ -41,46 +41,47 @@ function getQuads() {
     }
 
     const quads = parser.parse(editor.document.getText(), {
-		onPrefix: (prefix: any, iri: any) => {
-			console.log(prefix, iri.value);
-			prefixMap[iri.value] = prefix;},
-		onComment: (comment: any) => console.log(comment)
-	});
-	console.log(prefixMap);
-	console.log(quads);
-	return quads;
+        onPrefix: (prefix: any, iri: any) => {
+            console.log(prefix, iri.value);
+            prefixMap[iri.value] = prefix;
+        },
+        onComment: (comment: any) => console.log(comment)
+    });
+    console.log(prefixMap);
+    console.log(quads);
+    return quads;
 }
 
 function replaceWithPrefix(iri: string) {
-	const sortedEntries = Object.entries(prefixMap).sort((a, b) => b[0].length - a[0].length);
+    const sortedEntries = Object.entries(prefixMap).sort((a, b) => b[0].length - a[0].length);
 
-	for (const [key, value] of sortedEntries) {
-		if (iri.includes(key)) {
-			return iri.replace(key, value + ':');
-		}
-	}
-	return iri;
+    for (const [key, value] of sortedEntries) {
+        if (iri.includes(key)) {
+            return iri.replace(key, value + ':');
+        }
+    }
+    return iri;
 }
 
 function generateNodes(quads: any[]) {
-	const nodes: { id: string }[] = [];
-	const subjects = quads.map(quad => replaceWithPrefix(quad.subject.id));
-	const objects = quads.map(quad => replaceWithPrefix(quad.object.id));
-	const allNodes = [...new Set([...subjects, ...objects])];
-	allNodes.forEach(node => nodes.push({ id: node }));
-	return nodes;
+    const nodes: { id: string }[] = [];
+    const subjects = quads.map(quad => replaceWithPrefix(quad.subject.id));
+    const objects = quads.map(quad => replaceWithPrefix(quad.object.id));
+    const allNodes = [...new Set([...subjects, ...objects])];
+    allNodes.forEach(node => nodes.push({ id: node }));
+    return nodes;
 }
 
 function generateLinks(quads: any[]) {
-	const links: { source: string, target: string, predicate: string }[] = [];
-	quads.forEach(quad => {
-		links.push({
-			source: replaceWithPrefix(quad.subject.id),
-			target: replaceWithPrefix(quad.object.id),
-			predicate: replaceWithPrefix(quad.predicate.id)
-		});
-	});
-	return links;
+    const links: { source: string, target: string, predicate: string }[] = [];
+    quads.forEach(quad => {
+        links.push({
+            source: replaceWithPrefix(quad.subject.id),
+            target: replaceWithPrefix(quad.object.id),
+            predicate: replaceWithPrefix(quad.predicate.id)
+        });
+    });
+    return links;
 }
 
 export function getWebviewContent(nodes: { id: string; }[], links: { source: string; target: string; }[]) {
@@ -110,12 +111,12 @@ export function getWebviewContent(nodes: { id: string; }[], links: { source: str
 
             // Create the SVG container
 
-			const svgFix = d3.select("svg")
-                .call(d3.zoom().on("zoom", (event) => {
-                    g.attr("transform", event.transform);
-                }));
+			const svg = d3.select("svg");
+            const container = svg.append("g"); // This will be zoomed/panned
 
-			const svg = svgFix.append("g");
+            svg.call(d3.zoom().on("zoom", (event) => {
+                container.attr("transform", event.transform);
+            }));
 
             const width = window.innerWidth;
             const height = window.innerHeight;
@@ -127,7 +128,7 @@ export function getWebviewContent(nodes: { id: string; }[], links: { source: str
                 .force("center", d3.forceCenter(width / 2, height / 2));
 
             // Add links (edges)
-            const link = svg.append("g")
+            const link = container.append("g")
                 .attr("stroke", "#999")
                 .attr("stroke-opacity", 0.6)
                 .selectAll("line")
@@ -137,7 +138,7 @@ export function getWebviewContent(nodes: { id: string; }[], links: { source: str
 				.attr("marker-end", "url(#arrowhead)");
 
             // Add nodes (vertices)
-            const node = svg.append("g")
+            const node = container.append("g")
                 .attr("stroke", "#fff")
                 .attr("stroke-width", 1.5)
                 .selectAll("circle")
@@ -149,17 +150,17 @@ export function getWebviewContent(nodes: { id: string; }[], links: { source: str
 			
 
             // Add node labels
-            const nodeText = svg.append("g")
+            const nodeText = container.append("g")
                 .selectAll("text")
                 .data(nodes)
                 .join("text")
                 .text(d => d.id.startsWith('_') ? "" : d.id)
                 .attr("x", 12)
                 .attr("y", ".31em")
-				.attr("fill", "white");
-			
-			const linkText = svg.append("g")
-				.selectAll("text")
+                .attr("fill", "white");
+
+            const linkText = container.append("g")
+                .selectAll("text")
 				.data(links)
 				.join("text")
 				.text(d => d.predicate)
@@ -218,4 +219,4 @@ export function getWebviewContent(nodes: { id: string; }[], links: { source: str
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }
