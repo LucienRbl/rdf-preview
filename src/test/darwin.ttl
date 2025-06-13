@@ -1,0 +1,54 @@
+@prefix ex: <http://example.org> .
+@prefix place: <http://example.org/Place/> .
+@prefix act: <http://example.org/Activity/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:CharlesDarwin
+    rdf:type ex:Person ;
+    ex:fullName "Charles Robert Darwin" ;
+    ex:hasWritten ex:OriginOfSpecies;
+    ex:hasActivity act:Geologist, act:Biologist, act:Naturalist;
+    ex:born _:birth;
+    ex:died _:death;
+    ex:nationality place:England;
+    ex:knownFor ex:NaturalSelection .
+
+ex:OriginOfSpecies
+    rdf:type ex:Book ;
+    ex:publishedIn "24/11/1859"^^xsd:date;
+    ex:fullTitle "On the Origin of Species by Means of Natural Selection, or the Preservation of Favoured Races in the Struggle for Life";
+    ex:about ex:NaturalSelection .
+
+_:birth
+    ex:place place:Shrewsbury;
+    ex:date "12/02/1809"^^xsd:date.
+
+_:death
+    ex:place place:Down;
+    ex:date "19/04/1882"^^xsd:date.
+
+place:Shrewsbury
+    rdf:type place:City ;
+    ex:inCounty place:Shropshire .
+
+place:Shropshire
+    rdf:type place:County;
+    place:inCountry place:England .
+
+place:Down
+    rdf:type place:City ;
+    ex:inCounty place:Kent .
+
+place:Kent
+    rdf:type place:County ;
+    place:inCountry place:England .
+
+place:England
+    rdf:type place:Country .
+
+
+
+
+
+
