@@ -1,25 +1,18 @@
 import * as vscode from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
-
-    // Use the console to output diagnostic information (console.log) and errors (console.error)
-    // This line of code will only be executed once when your extension is activated
-    console.log('Congratulations, your extension "rdf-preview" is now active!');
-
-
-
     const disposable = vscode.commands.registerCommand('rdf-preview.showGraph', () => {
         const panel = vscode.window.createWebviewPanel(
-            'rdfPreview', // Identifies the type of the webview. Used internally
-            'RDF Preview', // Title of the panel displayed to the user
-            vscode.ViewColumn.Two, // Editor column to show the new webview panel in.
+            'rdfPreview', 
+            'RDF Preview', 
+            vscode.ViewColumn.Two, 
             {
                 enableScripts: true
-            } // Webview options. More on these later.
+            } 
         );
-        const quads = getQuads(); // Replace with your RDF parsing logic
-        const nodes = generateNodes(quads); // Function to convert quads to nodes
-        const links = generateLinks(quads); // Function to convert quads to links
+        const quads = getQuads(); 
+        const nodes = generateNodes(quads); 
+        const links = generateLinks(quads);
 
         panel.webview.html = getWebviewContent(nodes, links);
     });
