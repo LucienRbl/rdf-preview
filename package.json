@@ -22,7 +22,6 @@
     "stardog-union.stardog-rdf-grammars"
   ],
   "repository": "https://github.com/LucienRbl/rdf-preview.git",
-  "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -54,7 +53,7 @@
     "@types/mocha": "^10.0.9",
     "@types/n3": "^1.26.0",
     "@types/node": "20.x",
-    "@types/vscode": "^1.94.0",
+    "@types/vscode": "^1.100.0",
     "@typescript-eslint/eslint-plugin": "^8.10.0",
     "@typescript-eslint/parser": "^8.7.0",
     "@vscode/test-cli": "^0.0.10",
