@@ -3,18 +3,48 @@ import * as vscode from 'vscode';
 export function activate(context: vscode.ExtensionContext) {
     const disposable = vscode.commands.registerCommand('rdf-preview.showGraph', () => {
         const panel = vscode.window.createWebviewPanel(
-            'rdfPreview', 
-            'RDF Preview', 
-            vscode.ViewColumn.Two, 
+            'rdfPreview',
+            'RDF Preview',
+            vscode.ViewColumn.Two,
             {
                 enableScripts: true
-            } 
+            }
         );
-        const quads = getQuads(); 
-        const nodes = generateNodes(quads); 
+
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showErrorMessage('No active text editor found.');
+            return;
+        }
+
+
+
+        const quads = getQuads(editor.document);
+        const nodes = generateNodes(quads);
         const links = generateLinks(quads);
 
-        panel.webview.html = getWebviewContent(nodes, links);
+
+
+        panel.webview.html = getWebviewContent(panel, context, nodes, links);
+
+        const docUri = editor.document.uri.toString();
+
+        panel.webview.onDidReceiveMessage(async message => {
+            if (message.command === 'refreshGraph') {
+                const updatedDocument = await vscode.workspace.openTextDocument(vscode.Uri.parse(docUri));
+                const updatedQuads = getQuads(updatedDocument);
+                const updatedNodes = generateNodes(updatedQuads);
+                const updatedLinks = generateLinks(updatedQuads);
+
+                panel.webview.postMessage({
+                    command: 'updateGraph',
+                    nodes: updatedNodes,
+                    links: updatedLinks
+                });
+            }
+        });
+
+
     });
 
     context.subscriptions.push(disposable);
@@ -25,23 +55,15 @@ const parser = new Parser();
 const prefixMap: { [key: string]: string } = {};
 
 
-function getQuads() {
-    const editor = vscode.window.activeTextEditor;
+function getQuads(document: vscode.TextDocument): any[] {
 
-    if (!editor) {
-        vscode.window.showErrorMessage('No active text editor found.');
-        return [];
-    }
-
-    const quads = parser.parse(editor.document.getText(), {
+    const quads = parser.parse(document.getText(), {
         onPrefix: (prefix: any, iri: any) => {
             console.log(prefix, iri.value);
             prefixMap[iri.value] = prefix;
         },
         onComment: (comment: any) => console.log(comment)
     });
-    console.log(prefixMap);
-    console.log(quads);
     return quads;
 }
 
@@ -77,7 +99,16 @@ function generateLinks(quads: any[]) {
     return links;
 }
 
-export function getWebviewContent(nodes: { id: string; }[], links: { source: string; target: string; }[]) {
+export function getWebviewContent(
+    panel: vscode.WebviewPanel,
+    context: vscode.ExtensionContext,
+    nodes: { id: string; }[],
+    links: { source: string; target: string; }[]) {
+    // Get the URI for the local JS file
+    const scriptUri = panel.webview.asWebviewUri(
+        vscode.Uri.joinPath(context.extensionUri, 'src', 'd3script.js')
+    );
+
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -85,12 +116,20 @@ export function getWebviewContent(nodes: { id: string; }[], links: { source: str
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>RDF Graph Preview</title>
         <script src="https://d3js.org/d3.v7.min.js"></script>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=recenter,refresh" />
         <style>
             body { margin: 0; overflow: auto; }
             svg { width: 100vw; height: 100vh; }
         </style>
+        <link rel="stylesheet" href="${panel.webview.asWebviewUri(
+        vscode.Uri.joinPath(context.extensionUri, 'src', 'style.css')
+    )}" />
     </head>
     <body>
+        <div class="controls-container">
+            <button id="fit-zoom-btn" class="btn"><span class="material-symbols-outlined">recenter</span></button>
+            <button id="refresh-btn" class="btn"><span class="material-symbols-outlined">refresh</span></button>
+        </div>
         <svg>
 			<defs>
 				<marker id="arrowhead" markerWidth="6" markerHeight="7" refX="10" refY="2.5" orient="auto">
@@ -98,114 +137,33 @@ export function getWebviewContent(nodes: { id: string; }[], links: { source: str
 				</marker>
 			</defs>
 		</svg>
+        <script src="${scriptUri}"></script>
         <script>
+            const vscode = acquireVsCodeApi();
+            console.log('vscode API acquired', vscode);
             const nodes = ${JSON.stringify(nodes)};
             const links = ${JSON.stringify(links)};
 
-            // Create the SVG container
+            window.renderGraph(nodes, links);
 
-			const svg = d3.select("svg");
-            const container = svg.append("g"); // This will be zoomed/panned
-
-            svg.call(d3.zoom().on("zoom", (event) => {
-                container.attr("transform", event.transform);
-            }));
-
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-
-            // Initialize D3 force simulation
-            const simulation = d3.forceSimulation(nodes)
-                .force("link", d3.forceLink(links).id(d => d.id).distance(100))
-                .force("charge", d3.forceManyBody().strength(-400))
-                .force("center", d3.forceCenter(width / 2, height / 2));
-
-            // Add links (edges)
-            const link = container.append("g")
-                .attr("stroke", "#999")
-                .attr("stroke-opacity", 0.6)
-                .selectAll("line")
-                .data(links)
-                .join("line")
-                .attr("stroke-width", 2)
-				.attr("marker-end", "url(#arrowhead)");
-
-            // Add nodes (vertices)
-            const node = container.append("g")
-                .attr("stroke", "#fff")
-                .attr("stroke-width", 1.5)
-                .selectAll("circle")
-                .data(nodes)
-                .join("circle")
-                .attr("r", 10)
-                .attr("fill", d => d.id.startsWith('"') ? "orange" : "forestgreen")
-                .call(drag(simulation));
-			
-
-            // Add node labels
-            const nodeText = container.append("g")
-                .selectAll("text")
-                .data(nodes)
-                .join("text")
-                .text(d => d.id.startsWith('_') ? "" : d.id)
-                .attr("x", 12)
-                .attr("y", ".31em")
-                .attr("fill", "white");
-
-            const linkText = container.append("g")
-                .selectAll("text")
-				.data(links)
-				.join("text")
-				.text(d => d.predicate)
-				.attr("x", 12)
-				.attr("y", ".31em")
-				.attr("fill", "grey");
-
-            // Update the graph on each simulation tick
-            simulation.on("tick", () => {
-                link
-                    .attr("x1", d => d.source.x)
-                    .attr("y1", d => d.source.y)
-                    .attr("x2", d => d.target.x)
-                    .attr("y2", d => d.target.y);
-
-                node
-                    .attr("cx", d => d.x)
-                    .attr("cy", d => d.y);
-
-                nodeText
-                    .attr("x", d => d.x + 15)
-                    .attr("y", d => d.y + 3);
-
-				linkText
-					.attr("x", d => (d.source.x + d.target.x) / 2)
-					.attr("y", d => (d.source.y + d.target.y) / 2);
-            });
-
-            // Drag behavior for nodes
-            function drag(simulation) {
-                function dragstarted(event) {
-                    if (!event.active) simulation.alphaTarget(0.3).restart();
-                    event.subject.fx = event.subject.x;
-                    event.subject.fy = event.subject.y;
-                }
-
-                function dragged(event) {
-                    event.subject.fx = event.x;
-                    event.subject.fy = event.y;
-                }
-
-                function dragended(event) {
-                    if (!event.active) simulation.alphaTarget(0);
-                    event.subject.fx = null;
-                    event.subject.fy = null;
-                }
-
-                return d3.drag()
-                    .on("start", dragstarted)
-                    .on("drag", dragged)
-                    .on("end", dragended);
+            document.getElementById('fit-zoom-btn').onclick = function() {
+                window.fitNodes(nodes, window.innerWidth, window.innerHeight, window.d3Container);
             }
+
+
+            document.getElementById('refresh-btn').onclick = function() {
+                vscode.postMessage({ command: 'refreshGraph' });
+            }
+
+            window.addEventListener('message', event => {
+                const message = event.data;
+
+                console.log('Received message:', message);
+                if (message.command === 'updateGraph') {
+                    window.emptyGraph();
+                    window.renderGraph(message.nodes, message.links);
+                }
+            });
         </script>
     </body>
     </html>`;
