@@ -35,11 +35,12 @@ Thank you for your interest in contributing to RDF Preview! This VS Code extensi
 rdf-preview/
 ├── src/
 │   ├── extension.ts          # Main extension logic
-│   ├── d3script.js          # D3.js graph visualization
-│   ├── style.css            # CSS styles for webview
 │   └── test/
 │       ├── extension.test.ts # Unit tests
 │       └── darwin.ttl       # Test RDF file
+├── media/
+│   ├── d3script.js          # D3.js graph visualization
+│   └── style.css            # CSS styles for webview
 ├── package.json             # Extension manifest
 ├── tsconfig.json           # TypeScript configuration
 ├── eslint.config.mjs       # ESLint configuration

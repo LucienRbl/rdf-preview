@@ -4,7 +4,11 @@ All notable changes to the "rdf-preview" extension will be documented in this fi
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [0.2.1]
+### Fixed
+- Fix issue where RDF graph preview would not be display.
+- Fix a bug causing missing styles in the RDF graph preview panel.
+
 
 ## [0.2.0]
 ### Added
