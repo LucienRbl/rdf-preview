@@ -4,7 +4,7 @@ RDF-Preview is a vscode extension which provide a quick visualization of RDF Gra
 
 ## Features
 
-- Preview **Turtle** of **N-Triples** RDF Graph in a separate tab. 
+- Preview **Turtle** or **N-Triples** RDF Graph in a separate tab. 
 
 ![Preview](images/darwin.png)
 
