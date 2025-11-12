@@ -29,18 +29,25 @@ export function activate(context: vscode.ExtensionContext) {
 
         const docUri = editor.document.uri.toString();
 
+        // Set up file watcher for auto-refresh on save
+        const fileWatcher = vscode.workspace.onDidSaveTextDocument((savedDocument) => {
+            if (savedDocument.uri.toString() === docUri) {
+                refreshGraph(panel, savedDocument);
+            }
+        });
+
+        // Store the watcher in subscriptions to clean up when panel is disposed
+        panel.onDidDispose(() => {
+            fileWatcher.dispose();
+        });
+
         panel.webview.onDidReceiveMessage(async message => {
             if (message.command === 'refreshGraph') {
-                const updatedDocument = await vscode.workspace.openTextDocument(vscode.Uri.parse(docUri));
-                const updatedQuads = getQuads(updatedDocument);
-                const updatedNodes = generateNodes(updatedQuads);
-                const updatedLinks = generateLinks(updatedQuads);
-
-                panel.webview.postMessage({
-                    command: 'updateGraph',
-                    nodes: updatedNodes,
-                    links: updatedLinks
-                });
+                // const updatedDocument = await vscode.workspace.openTextDocument(vscode.Uri.parse(docUri));
+                refreshGraph(panel, editor.document);
+            }
+            if (message.command === 'fullyRefreshGraph') {
+                fullyRefreshGraph(panel, editor.document);
             }
         });
 
@@ -50,13 +57,40 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
 }
 
+
+function fullyRefreshGraph(panel: vscode.WebviewPanel, document: vscode.TextDocument) {
+    const quads = getQuads(document);
+    const nodes = generateNodes(quads);
+    const links = generateLinks(quads);
+
+    panel.webview.postMessage({
+        command: 'updateGraphFull',
+        nodes: nodes,
+        links: links
+    });
+}
+
+
+
+// Helper function to refresh the graph
+function refreshGraph(panel: vscode.WebviewPanel, document: vscode.TextDocument) {
+    const updatedQuads = getQuads(document);
+    const updatedNodes = generateNodes(updatedQuads);
+    const updatedLinks = generateLinks(updatedQuads);
+
+    panel.webview.postMessage({
+        command: 'updateGraph',
+        nodes: updatedNodes,
+        links: updatedLinks
+    });
+}
+
 const { Parser } = require('n3');
 const parser = new Parser();
 const prefixMap: { [key: string]: string } = {};
 
 
 function getQuads(document: vscode.TextDocument): any[] {
-
     const quads = parser.parse(document.getText(), {
         onPrefix: (prefix: any, iri: any) => {
             console.log(prefix, iri.value);
@@ -152,7 +186,7 @@ export function getWebviewContent(
 
 
             document.getElementById('refresh-btn').onclick = function() {
-                vscode.postMessage({ command: 'refreshGraph' });
+                vscode.postMessage({ command: 'fullyRefreshGraph' });
             }
 
             window.addEventListener('message', event => {
@@ -160,6 +194,12 @@ export function getWebviewContent(
 
                 console.log('Received message:', message);
                 if (message.command === 'updateGraph') {
+                    // Use incremental update instead of full re-render
+                    window.updateGraph(message.nodes, message.links);
+                  
+                }
+
+                if (message.command === 'updateGraphFull') {
                     window.emptyGraph();
                     window.renderGraph(message.nodes, message.links);
                 }
