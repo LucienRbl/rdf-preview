@@ -138,9 +138,13 @@ export function getWebviewContent(
     context: vscode.ExtensionContext,
     nodes: { id: string; }[],
     links: { source: string; target: string; }[]) {
-    // Get the URI for the local JS file
+    // Get the URI for the local JS file (from media folder)
     const scriptUri = panel.webview.asWebviewUri(
-        vscode.Uri.joinPath(context.extensionUri, 'src', 'd3script.js')
+        vscode.Uri.joinPath(context.extensionUri, 'media', 'd3script.js')
+    );
+
+    const styleUri = panel.webview.asWebviewUri(
+        vscode.Uri.joinPath(context.extensionUri, 'media', 'style.css')
     );
 
     return `<!DOCTYPE html>
@@ -155,9 +159,7 @@ export function getWebviewContent(
             body { margin: 0; overflow: auto; }
             svg { width: 100vw; height: 100vh; }
         </style>
-        <link rel="stylesheet" href="${panel.webview.asWebviewUri(
-        vscode.Uri.joinPath(context.extensionUri, 'src', 'style.css')
-    )}" />
+        <link rel="stylesheet" href="${styleUri}" />
     </head>
     <body>
         <div class="controls-container">
