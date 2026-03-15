@@ -35,16 +35,12 @@ window.renderGraph = function (nodes, links) {
     .attr("class", "link")
     .attr("marker-end", "url(#arrowhead)")
     .on("mouseover", function (event, d) {
-      d3.select(this)
-        .classed("hovered", true)
-        .attr("marker-end", "url(#arrowhead-hover)");
-      linkText.filter((td) => td === d).classed("hovered", true);
+      d3.select(this).classed("highlighted", true);
+      linkText.filter((td) => td === d).classed("highlighted", true);
     })
     .on("mouseout", function (event, d) {
-      d3.select(this)
-        .classed("hovered", false)
-        .attr("marker-end", "url(#arrowhead)");
-      linkText.filter((td) => td === d).classed("hovered", false);
+      d3.select(this).classed("highlighted", false);
+      linkText.filter((td) => td === d).classed("highlighted", false);
     });
 
   // Add nodes (vertices)
@@ -57,12 +53,12 @@ window.renderGraph = function (nodes, links) {
     .attr("class", (d) => (d.id.startsWith('"') ? "node literal" : "node iri"))
     .attr("r", 10)
     .on("mouseover", function (event, d) {
-      d3.select(this).classed("hovered", true);
-      nodeText.filter((td) => td.id === d.id).classed("hovered", true);
+      d3.select(this).classed("highlighted", true);
+      nodeText.filter((td) => td.id === d.id).classed("highlighted", true);
     })
     .on("mouseout", function (event, d) {
-      d3.select(this).classed("hovered", false);
-      nodeText.filter((td) => td.id === d.id).classed("hovered", false);
+      d3.select(this).classed("highlighted", false);
+      nodeText.filter((td) => td.id === d.id).classed("highlighted", false);
     })
     .call(drag(simulation));
 
@@ -334,3 +330,25 @@ function emptyGraph() {
   window.currentNodes = null;
   window.currentLinks = null;
 }
+
+window.highlightNodes = function (term) {
+  if (!window.graphElements) {
+    return;
+  }
+  const { node, nodeText, link, linkText } = window.graphElements;
+
+  if (!term || term.trim() === "") {
+    node.classed("highlighted", false);
+    nodeText.classed("highlighted", false);
+    link.classed("highlighted", false);
+    linkText.classed("highlighted", false);
+    return;
+  }
+
+  node.classed("highlighted", (d) => d.id.toLowerCase().includes(term));
+  nodeText.classed("highlighted", (d) => d.id.toLowerCase().includes(term));
+  link.classed("highlighted", (d) => d.predicate.toLowerCase().includes(term));
+  linkText.classed("highlighted", (d) =>
+    d.predicate.toLowerCase().includes(term),
+  );
+};
