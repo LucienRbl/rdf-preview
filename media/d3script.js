@@ -31,46 +31,42 @@ window.renderGraph = function (nodes, links) {
   // Add links (edges)
   const link = container
     .append("g")
-    .attr("stroke", "#999")
-    .attr("stroke-opacity", 0.6)
+    .attr("class", "links")
     .selectAll("line")
     .data(links)
     .join("line")
-    .attr("stroke-width", 2)
+    .attr("class", "link")
     .attr("marker-end", "url(#arrowhead)");
 
   // Add nodes (vertices)
   const node = container
     .append("g")
-    .attr("stroke", "#fff")
-    .attr("stroke-width", 1.5)
+    .attr("class", "nodes")
     .selectAll("circle")
     .data(nodes)
     .join("circle")
+    .attr("class", (d) => (d.id.startsWith('"') ? "node literal" : "node iri"))
     .attr("r", 10)
-    .attr("fill", (d) => (d.id.startsWith('"') ? "orange" : "forestgreen"))
     .call(drag(simulation));
 
   // Add node labels
   const nodeText = container
     .append("g")
+    .attr("class", "node-labels")
     .selectAll("text")
     .data(nodes)
     .join("text")
-    .text((d) => (d.id.startsWith("_") ? "" : d.id))
-    .attr("x", 12)
-    .attr("y", ".31em")
-    .attr("fill", "white");
+    .attr("class", "node-label")
+    .text((d) => (d.id.startsWith("_") ? "" : d.id));
 
   const linkText = container
     .append("g")
+    .attr("class", "link-labels")
     .selectAll("text")
     .data(links)
     .join("text")
-    .text((d) => d.predicate)
-    .attr("x", 12)
-    .attr("y", ".31em")
-    .attr("fill", "grey");
+    .attr("class", "link-label")
+    .text((d) => d.predicate);
 
   // Update the graph on each simulation tick
   simulation.on("tick", () => {

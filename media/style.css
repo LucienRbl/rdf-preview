@@ -1,3 +1,4 @@
+/* controls */
 .controls-container {
     position: fixed;
     top: 0;
@@ -9,7 +10,6 @@
     height: auto;
     padding: 16px;
 }
-
 
 .btn {
     padding: 8px 16px;
@@ -31,4 +31,43 @@
 
 .btn:hover {
     background: #444;
+}
+
+/* nodes */
+
+.node {
+  stroke: white;
+  stroke-width: 1.5;
+}
+
+.node.iri {
+  fill: forestgreen;
+}
+
+.node.literal {
+  fill: orange;
+}
+
+/* links */
+
+.link {
+  stroke: #999;
+  stroke-width: 2;
+  stroke-opacity: 0.6;
+}
+
+/* node labels */
+
+.node-label {
+  fill: white;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+/* link labels */
+
+.link-label {
+  fill: grey;
+  font-size: 11px;
+  pointer-events: none;
 }
