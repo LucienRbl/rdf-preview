@@ -1,7 +1,7 @@
-window.renderGraph = function (nodes, links) {
+(function () {
   const svg = d3.select("svg");
-  const container = svg.append("g");
-  window.d3Container = container; // Expose for external access
+  let container = svg.append("g");
+  let simulation, graphElements, currentNodes, currentLinks;
 
   svg.call(
     d3.zoom().on("zoom", (event) => {
@@ -9,346 +9,264 @@ window.renderGraph = function (nodes, links) {
     }),
   );
 
-  const width = window.innerWidth;
-  const height = window.innerHeight;
+  window.renderGraph = function (nodes, links) {
+    currentNodes = nodes;
+    currentLinks = links;
 
-  // Initialize D3 force simulation
-  const simulation = d3
-    .forceSimulation(nodes)
-    .force(
-      "link",
-      d3
-        .forceLink(links)
-        .id((d) => d.id)
-        .distance(100),
-    )
-    .force("charge", d3.forceManyBody().strength(-400))
-    .force("center", d3.forceCenter(width / 2, height / 2));
+    const width = window.innerWidth;
+    const height = window.innerHeight;
 
-  // Add links (edges)
-  const link = container
-    .append("g")
-    .attr("class", "links")
-    .selectAll("line")
-    .data(links)
-    .join("line")
-    .attr("class", "link")
-    .attr("marker-end", "url(#arrowhead)")
-    .on("mouseover", function (event, d) {
-      d3.select(this).classed("highlighted", true);
-      linkText.filter((td) => td === d).classed("highlighted", true);
-    })
-    .on("mouseout", function (event, d) {
-      d3.select(this).classed("highlighted", false);
-      linkText.filter((td) => td === d).classed("highlighted", false);
+    simulation = d3
+      .forceSimulation(nodes)
+      .force(
+        "link",
+        d3
+          .forceLink(links)
+          .id((d) => d.id)
+          .distance(100),
+      )
+      .force("charge", d3.forceManyBody().strength(-400))
+      .force("center", d3.forceCenter(width / 2, height / 2));
+
+    const linkGroup = container.append("g").attr("class", "links");
+    const nodeGroup = container.append("g").attr("class", "nodes");
+    const nodeLabelGroup = container.append("g").attr("class", "node-labels");
+    const linkLabelGroup = container.append("g").attr("class", "link-labels");
+
+    const link = linkGroup
+      .selectAll("line")
+      .data(links)
+      .join("line")
+      .attr("class", "link")
+      .attr("marker-end", "url(#arrowhead)");
+
+    const node = nodeGroup
+      .selectAll("circle")
+      .data(nodes)
+      .join("circle")
+      .attr("class", (d) =>
+        d.id.startsWith('"') ? "node literal" : "node iri",
+      )
+      .attr("r", 10)
+      .call(drag(simulation));
+
+    const nodeText = nodeLabelGroup
+      .selectAll("text")
+      .data(nodes)
+      .join("text")
+      .attr("class", "node-label")
+      .text((d) => (d.id.startsWith("_") ? "" : d.id));
+
+    const linkText = linkLabelGroup
+      .selectAll("text")
+      .data(links)
+      .join("text")
+      .attr("class", "link-label")
+      .text((d) => d.predicate);
+
+    setupInteractions(node, link, nodeText, linkText);
+
+    simulation.on("tick", () => {
+      link
+        .attr("x1", (d) => d.source.x)
+        .attr("y1", (d) => d.source.y)
+        .attr("x2", (d) => d.target.x)
+        .attr("y2", (d) => d.target.y);
+      node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+      nodeText.attr("x", (d) => d.x + 15).attr("y", (d) => d.y + 3);
+      linkText
+        .attr("x", (d) => (d.source.x + d.target.x) / 2)
+        .attr("y", (d) => (d.source.y + d.target.y) / 2);
     });
 
-  // Add nodes (vertices)
-  const node = container
-    .append("g")
-    .attr("class", "nodes")
-    .selectAll("circle")
-    .data(nodes)
-    .join("circle")
-    .attr("class", (d) => (d.id.startsWith('"') ? "node literal" : "node iri"))
-    .attr("r", 10)
-    .on("mouseover", function (event, d) {
-      d3.select(this).classed("highlighted", true);
-      nodeText.filter((td) => td.id === d.id).classed("highlighted", true);
-    })
-    .on("mouseout", function (event, d) {
-      d3.select(this).classed("highlighted", false);
-      nodeText.filter((td) => td.id === d.id).classed("highlighted", false);
-    })
-    .call(drag(simulation));
-
-  // Add node labels
-  const nodeText = container
-    .append("g")
-    .attr("class", "node-labels")
-    .selectAll("text")
-    .data(nodes)
-    .join("text")
-    .attr("class", "node-label")
-    .text((d) => (d.id.startsWith("_") ? "" : d.id));
-
-  const linkText = container
-    .append("g")
-    .attr("class", "link-labels")
-    .selectAll("text")
-    .data(links)
-    .join("text")
-    .attr("class", "link-label")
-    .text((d) => d.predicate);
-
-  // Update the graph on each simulation tick
-  simulation.on("tick", () => {
-    link
-      .attr("x1", (d) => d.source.x)
-      .attr("y1", (d) => d.source.y)
-      .attr("x2", (d) => d.target.x)
-      .attr("y2", (d) => d.target.y);
-
-    node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
-
-    nodeText.attr("x", (d) => d.x + 15).attr("y", (d) => d.y + 3);
-
-    linkText
-      .attr("x", (d) => (d.source.x + d.target.x) / 2)
-      .attr("y", (d) => (d.source.y + d.target.y) / 2);
-  });
-
-  // Store simulation and elements globally for incremental updates
-  window.simulation = simulation;
-  window.graphElements = { link, node, nodeText, linkText, container };
-  window.currentNodes = nodes;
-  window.currentLinks = links;
-};
-
-function fitNodes(nodes, width, height, container) {
-  const xs = nodes.map((d) => d.x);
-  const ys = nodes.map((d) => d.y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-
-  const bboxWidth = maxX - minX;
-  const bboxHeight = maxY - minY;
-
-  const svgWidth = width;
-  const svgHeight = height;
-
-  // Calculate scale and translation to fit all nodes
-  const scale = 0.8 * Math.min(svgWidth / bboxWidth, svgHeight / bboxHeight, 1);
-  const translateX = svgWidth / 2 - scale * (minX + bboxWidth / 2);
-  const translateY = svgHeight / 2 - scale * (minY + bboxHeight / 2);
-
-  container
-    .transition()
-    .duration(500)
-    .attr(
-      "transform",
-      `translate(${translateX},${translateY}) scale(${scale})`,
-    );
-}
-
-window.updateGraph = function (newNodes, newLinks) {
-  if (!window.simulation || !window.graphElements) {
-    // Fallback to full re-render if simulation not available
-    window.emptyGraph();
-    window.renderGraph(newNodes, newLinks);
-    return;
-  }
-
-  const { link, node, nodeText, linkText, container } = window.graphElements;
-  const simulation = window.simulation;
-
-  // Create a map of existing node positions and fixed states
-  const existingNodeMap = new Map();
-  window.currentNodes.forEach((node) => {
-    existingNodeMap.set(node.id, {
-      x: node.x,
-      y: node.y,
-      fx: node.fx,
-      fy: node.fy,
-      vx: node.vx,
-      vy: node.vy,
-    });
-  });
-
-  // Preserve positions and fixed states for existing nodes
-  newNodes.forEach((node) => {
-    const existing = existingNodeMap.get(node.id);
-    if (existing) {
-      node.x = existing.x;
-      node.y = existing.y;
-      node.fx = existing.fx;
-      node.fy = existing.fy;
-      node.vx = existing.vx;
-      node.vy = existing.vy;
-    }
-  });
-
-  // Update nodes
-  const nodeUpdate = container
-    .select("g:nth-child(2)") // Node group
-    .selectAll("circle")
-    .data(newNodes, (d) => d.id);
-
-  // Remove old nodes
-  nodeUpdate.exit().remove();
-
-  // Add new nodes
-  const nodeEnter = nodeUpdate
-    .enter()
-    .append("circle")
-    .attr("r", 10)
-    .attr("fill", (d) => (d.id.startsWith('"') ? "orange" : "forestgreen"))
-    .attr("stroke", "#fff")
-    .attr("stroke-width", 1.5)
-    .call(drag(simulation));
-
-  // Merge old and new nodes
-  const nodeAll = nodeEnter.merge(nodeUpdate);
-
-  // Update node labels
-  const nodeTextUpdate = container
-    .select("g:nth-child(3)") // Node text group
-    .selectAll("text")
-    .data(newNodes, (d) => d.id);
-
-  nodeTextUpdate.exit().remove();
-
-  const nodeTextEnter = nodeTextUpdate
-    .enter()
-    .append("text")
-    .text((d) => (d.id.startsWith("_") ? "" : d.id))
-    .attr("x", 12)
-    .attr("y", ".31em")
-    .attr("fill", "white");
-
-  const nodeTextAll = nodeTextEnter.merge(nodeTextUpdate);
-
-  // Update links
-  const linkUpdate = container
-    .select("g:nth-child(1)") // Link group
-    .selectAll("line")
-    .data(
-      newLinks,
-      (d) =>
-        `${d.source.id || d.source}-${d.target.id || d.target}-${d.predicate}`,
-    );
-
-  linkUpdate.exit().remove();
-
-  const linkEnter = linkUpdate
-    .enter()
-    .append("line")
-    .attr("stroke", "#999")
-    .attr("stroke-opacity", 0.6)
-    .attr("stroke-width", 2)
-    .attr("marker-end", "url(#arrowhead)");
-
-  const linkAll = linkEnter.merge(linkUpdate);
-
-  // Update link labels
-  const linkTextUpdate = container
-    .select("g:nth-child(4)") // Link text group
-    .selectAll("text")
-    .data(
-      newLinks,
-      (d) =>
-        `${d.source.id || d.source}-${d.target.id || d.target}-${d.predicate}`,
-    );
-
-  linkTextUpdate.exit().remove();
-
-  const linkTextEnter = linkTextUpdate
-    .enter()
-    .append("text")
-    .text((d) => d.predicate)
-    .attr("x", 12)
-    .attr("y", ".31em")
-    .attr("fill", "grey");
-
-  const linkTextAll = linkTextEnter.merge(linkTextUpdate);
-
-  // Update simulation data with preserved positions
-  simulation.nodes(newNodes);
-  simulation.force("link").links(newLinks);
-
-  // Update tick function with new selections
-  simulation.on("tick", () => {
-    linkAll
-      .attr("x1", (d) => d.source.x)
-      .attr("y1", (d) => d.source.y)
-      .attr("x2", (d) => d.target.x)
-      .attr("y2", (d) => d.target.y);
-
-    nodeAll.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
-
-    nodeTextAll.attr("x", (d) => d.x + 15).attr("y", (d) => d.y + 3);
-
-    linkTextAll
-      .attr("x", (d) => (d.source.x + d.target.x) / 2)
-      .attr("y", (d) => (d.source.y + d.target.y) / 2);
-  });
-
-  // Only restart with very low alpha to avoid disrupting fixed nodes
-  simulation.alpha(0.1).restart();
-
-  // Update global references
-  window.currentNodes = newNodes;
-  window.currentLinks = newLinks;
-  window.graphElements = {
-    link: linkAll,
-    node: nodeAll,
-    nodeText: nodeTextAll,
-    linkText: linkTextAll,
-    container,
+    graphElements = {
+      link,
+      node,
+      nodeText,
+      linkText,
+      container,
+      groups: { linkGroup, nodeGroup, nodeLabelGroup, linkLabelGroup },
+    };
+    window.d3Container = container;
   };
-};
 
-// Drag behavior for nodes (moved to global scope)
-function drag(simulation) {
-  function dragstarted(event) {
-    if (!event.active) {
-      simulation.alphaTarget(0.3).restart();
+  function setupInteractions(node, link, nodeText, linkText) {
+    node
+      .on("mouseover", (event, d) => {
+        d3.select(event.currentTarget).classed("highlighted", true);
+        nodeText.filter((td) => td.id === d.id).classed("highlighted", true);
+      })
+      .on("mouseout", (event, d) => {
+        d3.select(event.currentTarget).classed("highlighted", false);
+        nodeText.filter((td) => td.id === d.id).classed("highlighted", false);
+      });
+
+    link
+      .on("mouseover", (event, d) => {
+        d3.select(event.currentTarget).classed("highlighted", true);
+        linkText.filter((td) => td === d).classed("highlighted", true);
+      })
+      .on("mouseout", (event, d) => {
+        d3.select(event.currentTarget).classed("highlighted", false);
+        linkText.filter((td) => td === d).classed("highlighted", false);
+      });
+  }
+
+  window.updateGraph = function (newNodes, newLinks) {
+    if (!simulation || !graphElements) {
+      window.emptyGraph();
+      window.renderGraph(newNodes, newLinks);
+      return;
     }
-    event.subject.fx = event.subject.x;
-    event.subject.fy = event.subject.y;
-  }
 
-  function dragged(event) {
-    event.subject.fx = event.x;
-    event.subject.fy = event.y;
-  }
+    const { groups } = graphElements;
+    const nodeMap = new Map((currentNodes || []).map((n) => [n.id, n]));
+    newNodes.forEach((n) => {
+      const old = nodeMap.get(n.id);
+      if (old) {
+        Object.assign(n, {
+          x: old.x,
+          y: old.y,
+          vx: old.vx,
+          vy: old.vy,
+          fx: old.fx,
+          fy: old.fy,
+        });
+      }
+    });
 
-  function dragended(event) {
-    if (!event.active) {
-      simulation.alphaTarget(0);
+    const node = groups.nodeGroup
+      .selectAll("circle")
+      .data(newNodes, (d) => d.id)
+      .join(
+        (enter) => enter.append("circle").attr("r", 10).call(drag(simulation)),
+        (update) => update,
+        (exit) => exit.remove(),
+      )
+      .attr("class", (d) =>
+        d.id.startsWith('"') ? "node literal" : "node iri",
+      );
+
+    const nodeText = groups.nodeLabelGroup
+      .selectAll("text")
+      .data(newNodes, (d) => d.id)
+      .join("text")
+      .attr("class", "node-label")
+      .text((d) => (d.id.startsWith("_") ? "" : d.id));
+
+    const link = groups.linkGroup
+      .selectAll("line")
+      .data(
+        newLinks,
+        (d) =>
+          `${d.source.id || d.source}-${d.target.id || d.target}-${d.predicate}`,
+      )
+      .join("line")
+      .attr("class", "link")
+      .attr("marker-end", "url(#arrowhead)");
+
+    const linkText = groups.linkLabelGroup
+      .selectAll("text")
+      .data(
+        newLinks,
+        (d) =>
+          `${d.source.id || d.source}-${d.target.id || d.target}-${d.predicate}`,
+      )
+      .join("text")
+      .attr("class", "link-label")
+      .text((d) => d.predicate);
+
+    setupInteractions(node, link, nodeText, linkText);
+
+    simulation.nodes(newNodes);
+    simulation.force("link").links(newLinks);
+
+    simulation.on("tick", () => {
+      link
+        .attr("x1", (d) => d.source.x)
+        .attr("y1", (d) => d.source.y)
+        .attr("x2", (d) => d.target.x)
+        .attr("y2", (d) => d.target.y);
+      node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+      nodeText.attr("x", (d) => d.x + 15).attr("y", (d) => d.y + 3);
+      linkText
+        .attr("x", (d) => (d.source.x + d.target.x) / 2)
+        .attr("y", (d) => (d.source.y + d.target.y) / 2);
+    });
+
+    simulation.alpha(0.1).restart();
+    currentNodes = newNodes;
+    currentLinks = newLinks;
+    graphElements = { ...graphElements, node, link, nodeText, linkText };
+  };
+
+  window.fitNodes = function (nodes, width, height, container) {
+    if (!nodes || !nodes.length) {
+      return;
     }
-    event.subject.fx = null;
-    event.subject.fy = null;
+    const xs = nodes.filter((d) => d.x !== undefined).map((d) => d.x);
+    const ys = nodes.filter((d) => d.y !== undefined).map((d) => d.y);
+    if (!xs.length) {
+      return;
+    }
+    const minX = Math.min(...xs),
+      maxX = Math.max(...xs);
+    const minY = Math.min(...ys),
+      maxY = Math.max(...ys);
+    const bw = maxX - minX,
+      bh = maxY - minY;
+    const scale = 0.8 * Math.min(width / (bw || 1), height / (bh || 1), 1);
+    const tx = width / 2 - scale * (minX + bw / 2);
+    const ty = height / 2 - scale * (minY + bh / 2);
+    container
+      .transition()
+      .duration(500)
+      .attr("transform", `translate(${tx},${ty}) scale(${scale})`);
+  };
+
+  window.highlightNodes = function (term) {
+    if (!graphElements) {
+      return;
+    }
+    const { node, nodeText, link, linkText } = graphElements;
+    const hasTerm = term && term.trim() !== "";
+    const match = (val) =>
+      val && val.toLowerCase().includes(term.toLowerCase());
+
+    node.classed("highlighted", (d) => hasTerm && match(d.id));
+    nodeText.classed("highlighted", (d) => hasTerm && match(d.id));
+    link.classed("highlighted", (d) => hasTerm && match(d.predicate));
+    linkText.classed("highlighted", (d) => hasTerm && match(d.predicate));
+  };
+
+  window.emptyGraph = function () {
+    container.selectAll("*").remove();
+    if (simulation) {
+      simulation.stop();
+    }
+    simulation = graphElements = currentNodes = currentLinks = null;
+  };
+
+  function drag(simulation) {
+    return d3
+      .drag()
+      .on("start", (event) => {
+        if (!event.active) {
+          simulation.alphaTarget(0.3).restart();
+        }
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
+      })
+      .on("drag", (event) => {
+        event.subject.fx = event.x;
+        event.subject.fy = event.y;
+      })
+      .on("end", (event) => {
+        if (!event.active) {
+          simulation.alphaTarget(0);
+        }
+        event.subject.fx = null;
+        event.subject.fy = null;
+      });
   }
-
-  return d3
-    .drag()
-    .on("start", dragstarted)
-    .on("drag", dragged)
-    .on("end", dragended);
-}
-
-function emptyGraph() {
-  const svg = d3.select("svg");
-  svg.selectAll("*").remove();
-  // Clear global references
-  window.d3Container = null;
-  window.simulation = null;
-  window.graphElements = null;
-  window.currentNodes = null;
-  window.currentLinks = null;
-}
-
-window.highlightNodes = function (term) {
-  if (!window.graphElements) {
-    return;
-  }
-  const { node, nodeText, link, linkText } = window.graphElements;
-
-  if (!term || term.trim() === "") {
-    node.classed("highlighted", false);
-    nodeText.classed("highlighted", false);
-    link.classed("highlighted", false);
-    linkText.classed("highlighted", false);
-    return;
-  }
-
-  node.classed("highlighted", (d) => d.id.toLowerCase().includes(term));
-  nodeText.classed("highlighted", (d) => d.id.toLowerCase().includes(term));
-  link.classed("highlighted", (d) => d.predicate.toLowerCase().includes(term));
-  linkText.classed("highlighted", (d) =>
-    d.predicate.toLowerCase().includes(term),
-  );
-};
+})();
