@@ -40,6 +40,10 @@
   stroke-width: 1.5;
 }
 
+.node.hovered {
+  stroke: yellow;
+}
+
 .node.iri {
   fill: forestgreen;
 }
@@ -55,6 +59,9 @@
   stroke-width: 2;
   stroke-opacity: 0.6;
 }
+.link.hovered {
+  stroke: yellow;
+}
 
 /* node labels */
 
@@ -64,10 +71,17 @@
   pointer-events: none;
 }
 
+.node-label.hovered {
+  fill: yellow;
+}
+
 /* link labels */
 
 .link-label {
   fill: grey;
   font-size: 11px;
   pointer-events: none;
+}
+.link-label.hovered {
+  fill: yellow;
 }

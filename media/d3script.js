@@ -1,7 +1,4 @@
 window.renderGraph = function (nodes, links) {
-  // Create the SVG container
-  console.log("Rendering graph with nodes:", nodes, "and links:", links);
-
   const svg = d3.select("svg");
   const container = svg.append("g");
   window.d3Container = container; // Expose for external access
@@ -36,7 +33,19 @@ window.renderGraph = function (nodes, links) {
     .data(links)
     .join("line")
     .attr("class", "link")
-    .attr("marker-end", "url(#arrowhead)");
+    .attr("marker-end", "url(#arrowhead)")
+    .on("mouseover", function (event, d) {
+      d3.select(this)
+        .classed("hovered", true)
+        .attr("marker-end", "url(#arrowhead-hover)");
+      linkText.filter((td) => td === d).classed("hovered", true);
+    })
+    .on("mouseout", function (event, d) {
+      d3.select(this)
+        .classed("hovered", false)
+        .attr("marker-end", "url(#arrowhead)");
+      linkText.filter((td) => td === d).classed("hovered", false);
+    });
 
   // Add nodes (vertices)
   const node = container
@@ -47,6 +56,14 @@ window.renderGraph = function (nodes, links) {
     .join("circle")
     .attr("class", (d) => (d.id.startsWith('"') ? "node literal" : "node iri"))
     .attr("r", 10)
+    .on("mouseover", function (event, d) {
+      d3.select(this).classed("hovered", true);
+      nodeText.filter((td) => td.id === d.id).classed("hovered", true);
+    })
+    .on("mouseout", function (event, d) {
+      d3.select(this).classed("hovered", false);
+      nodeText.filter((td) => td.id === d.id).classed("hovered", false);
+    })
     .call(drag(simulation));
 
   // Add node labels
@@ -308,7 +325,6 @@ function drag(simulation) {
 }
 
 function emptyGraph() {
-  console.log("Emptying graph");
   const svg = d3.select("svg");
   svg.selectAll("*").remove();
   // Clear global references
