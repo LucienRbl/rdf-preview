@@ -35,15 +35,11 @@ window.renderGraph = function (nodes, links) {
     .attr("class", "link")
     .attr("marker-end", "url(#arrowhead)")
     .on("mouseover", function (event, d) {
-      d3.select(this)
-        .classed("highlighted", true)
-        .attr("marker-end", "url(#arrowhead-highlighted)");
+      d3.select(this).classed("highlighted", true);
       linkText.filter((td) => td === d).classed("highlighted", true);
     })
     .on("mouseout", function (event, d) {
-      d3.select(this)
-        .classed("highlighted", false)
-        .attr("marker-end", "url(#arrowhead)");
+      d3.select(this).classed("highlighted", false);
       linkText.filter((td) => td === d).classed("highlighted", false);
     });
 

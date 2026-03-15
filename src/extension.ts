@@ -173,15 +173,19 @@ export function getWebviewContent(
             </div>
         </div>
         <svg>
-			<defs>
-				<marker id="arrowhead" markerWidth="6" markerHeight="7" refX="10" refY="2.5" orient="auto">
-					<polygon points="0,5 1.6666666666666667,2.5 0,0 5,2.5" fill="gray" />
-				</marker>
-				<marker id="arrowhead-highlighted" markerWidth="6" markerHeight="7" refX="10" refY="2.5" orient="auto">
-					<polygon points="0,5 1.6666666666666667,2.5 0,0 5,2.5" fill="yellow" />
-				</marker>
-			</defs>
-		</svg>
+        <defs>
+        <marker id="arrowhead"
+                markerWidth="6"
+                markerHeight="7"
+                refX="10"
+                refY="2.5"
+                orient="auto"
+                markerUnits="strokeWidth">
+            <polygon points="0,5 1.6667,2.5 0,0 5,2.5"
+                    fill="context-stroke" />
+        </marker>
+        </defs>
+        </svg>
         <script src="${scriptUri}"></script>
         <script>
             const vscode = acquireVsCodeApi();
