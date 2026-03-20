@@ -18,9 +18,6 @@
   "categories": [
     "Visualization"
   ],
-  "extensionDependencies": [
-    "stardog-union.stardog-rdf-grammars"
-  ],
   "repository": "https://github.com/LucienRbl/rdf-preview.git",
   "main": "./out/extension.js",
   "contributes": {
@@ -35,7 +32,7 @@
       "editor/title": [
         {
           "command": "rdf-preview.showGraph",
-          "when": "editorLangId == turtle || editorLangId == n-triples",
+          "when": "resourceExtname == .ttl || resourceExtname == .n3",
           "group": "navigation"
         }
       ]
