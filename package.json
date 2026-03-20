@@ -32,7 +32,7 @@
       "editor/title": [
         {
           "command": "rdf-preview.showGraph",
-          "when": "resourceExtname == .ttl || resourceExtname == .n3",
+          "when": "resourceExtname == .ttl || resourceExtname == .n3 || resourceExtname == .nt",
           "group": "navigation"
         }
       ]
